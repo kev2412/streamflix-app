@@ -38,7 +38,7 @@ const viewCounter = document.getElementById('view-counter');
 const backBtn = document.getElementById('back-btn');
 const searchInput = document.getElementById('search-input');
 
-// Sichere HTTPS-Brücke über Cloudflare Worker
+// Sichere HTTPS-BrÃ¼cke Ã¼ber Cloudflare Worker
 function httpGet(directUrl) {
     return new Promise((resolve) => {
         const secureUrl = CLOUDFLARE_WORKER + "?url=" + encodeURIComponent(directUrl);
@@ -47,7 +47,11 @@ function httpGet(directUrl) {
         xhr.timeout = 25000;
         xhr.onload = () => {
             if (xhr.status >= 200 && xhr.status < 300) {
-                try { resolve(JSON.parse(xhr.responseText)); } 
+                try {
+    let data = JSON.parse(xhr.responseText);
+    if (typeof data === "string") { try { data = JSON.parse(data); } catch(e){} }
+    resolve(data);
+} 
                 catch (e) { resolve([]); }
             } else resolve([]);
         };
@@ -201,7 +205,7 @@ async function openCategory(categoryObj) {
     const res = await httpGet(directUrl);
     items = Array.isArray(res) ? res : [];
     displayedItems = [...items];
-    viewCounter.innerText = items.length + " Einträge";
+    viewCounter.innerText = items.length + " EintrÃ¤ge";
     renderItems();
 }
 
