@@ -4,6 +4,8 @@ let CONFIG = {
     password: "3be1824d6f8e"
 };
 
+const CLOUDFLARE_WORKER = "https://streamflix-bridge.zboinskikevin.workers.dev";
+
 if (!CONFIG.server.startsWith('http://') && !CONFIG.server.startsWith('https://')) {
     CONFIG.server = 'http://' + CONFIG.server;
 }
@@ -36,11 +38,12 @@ const viewCounter = document.getElementById('view-counter');
 const backBtn = document.getElementById('back-btn');
 const searchInput = document.getElementById('search-input');
 
-// Direkter Netzwerkabruf (CORS-Unterstützung)
+// Sichere HTTPS-Brücke über Cloudflare Worker
 function httpGet(directUrl) {
     return new Promise((resolve) => {
+        const secureUrl = CLOUDFLARE_WORKER + "?url=" + encodeURIComponent(directUrl);
         const xhr = new XMLHttpRequest();
-        xhr.open('GET', directUrl, true);
+        xhr.open('GET', secureUrl, true);
         xhr.timeout = 25000;
         xhr.onload = () => {
             if (xhr.status >= 200 && xhr.status < 300) {
@@ -204,7 +207,8 @@ async function openCategory(categoryObj) {
 
 function toggleFavorite(item, starEl, e) {
     e.stopPropagation();
-    const favIdx = favorites.findIndex(f => f.stream_id === item.stream_id);
+    const sid = itemStreamId(item);
+    const favIdx = favorites.findIndex(f => itemStreamId(f) === sid);
     if (favIdx > -1) {
         favorites.splice(favIdx, 1);
         starEl.classList.remove('is-favorite');
@@ -227,7 +231,7 @@ function renderItems() {
         const div = document.createElement('div');
         if (isLive) {
             div.className = 'live-card';
-            const isFav = favorites.some(f => f.stream_id === itemStreamId(it));
+            const isFav = favorites.some(f => itemStreamId(f) === itemStreamId(it));
             const logo = it.stream_icon ? '<img class="live-logo" loading="lazy" src="' + it.stream_icon + '" onerror="this.style.display=\'none\'">' : '<div class="live-logo"></div>';
             
             div.innerHTML = logo + 
@@ -276,10 +280,10 @@ function playMedia(it) {
     let streamUrl = '';
 
     if (isLive) {
-        streamUrl = CONFIG.server + "/live/" + CONFIG.username + "/" + CONFIG.password + "/" + (it.stream_id || it.id) + ".m3u8";
+        streamUrl = CONFIG.server + "/live/" + CONFIG.username + "/" + CONFIG.password + "/" + itemStreamId(it) + ".m3u8";
     } else if (currentTab === 1) {
         const ext = it.container_extension || 'mp4';
-        streamUrl = CONFIG.server + "/movie/" + CONFIG.username + "/" + CONFIG.password + "/" + (it.stream_id || it.id) + "." + ext;
+        streamUrl = CONFIG.server + "/movie/" + CONFIG.username + "/" + CONFIG.password + "/" + itemStreamId(it) + "." + ext;
     } else {
         streamUrl = CONFIG.server + "/series/" + CONFIG.username + "/" + CONFIG.password + "/" + (it.series_id || it.id) + ".mp4";
     }
