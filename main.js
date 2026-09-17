@@ -38,21 +38,21 @@ const viewCounter = document.getElementById('view-counter');
 const backBtn = document.getElementById('back-btn');
 const searchInput = document.getElementById('search-input');
 
-// Sichere HTTPS-BrÃ¼cke Ã¼ber Cloudflare Worker
+// Verlustfreie Base64-Weiterleitung über Cloudflare
 function httpGet(directUrl) {
     return new Promise((resolve) => {
-        const secureUrl = CLOUDFLARE_WORKER + "?url=" + encodeURIComponent(directUrl);
+        const b64Url = btoa(unescape(encodeURIComponent(directUrl)));
+        const secureUrl = CLOUDFLARE_WORKER + "?b64=1&url=" + encodeURIComponent(b64Url);
         const xhr = new XMLHttpRequest();
         xhr.open('GET', secureUrl, true);
         xhr.timeout = 25000;
         xhr.onload = () => {
             if (xhr.status >= 200 && xhr.status < 300) {
                 try {
-    let data = JSON.parse(xhr.responseText);
-    if (typeof data === "string") { try { data = JSON.parse(data); } catch(e){} }
-    resolve(data);
-} 
-                catch (e) { resolve([]); }
+                    let data = JSON.parse(xhr.responseText);
+                    if (typeof data === "string") { try { data = JSON.parse(data); } catch(e){} }
+                    resolve(data);
+                } catch (e) { resolve([]); }
             } else resolve([]);
         };
         xhr.onerror = () => resolve([]);
@@ -150,7 +150,6 @@ async function openCategory(categoryObj) {
     viewName.innerText = currentCategory.category_name;
     gridContent.innerHTML = '';
 
-    // 1. Favoriten
     if (currentCategory.category_id === '__FAVORITES__') {
         items = favorites;
         displayedItems = [...items];
@@ -159,7 +158,6 @@ async function openCategory(categoryObj) {
         return;
     }
 
-    // 2. Gesamtkatalog
     if (currentCategory.category_id === '__ALL_MOVIES__' || currentCategory.category_id === '__ALL_SERIES__') {
         const isMovie = (currentCategory.category_id === '__ALL_MOVIES__');
         const cacheKey = 'global_cat_' + (isMovie ? 'vod' : 'series');
@@ -198,14 +196,13 @@ async function openCategory(categoryObj) {
         return;
     }
 
-    // 3. Einzelkategorie
     viewCounter.innerText = "Lade...";
     const actions = ['get_live_streams', 'get_vod_streams', 'get_series'];
     const directUrl = CONFIG.server + "/player_api.php?username=" + encodeURIComponent(CONFIG.username) + "&password=" + encodeURIComponent(CONFIG.password) + "&action=" + actions[currentTab] + "&category_id=" + encodeURIComponent(currentCategory.category_id);
     const res = await httpGet(directUrl);
     items = Array.isArray(res) ? res : [];
     displayedItems = [...items];
-    viewCounter.innerText = items.length + " EintrÃ¤ge";
+    viewCounter.innerText = items.length + " Einträge";
     renderItems();
 }
 
